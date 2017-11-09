@@ -1,0 +1,113 @@
+#!/bin/sh
+
+error_exit()
+{
+	echo "$3"
+	if [ $1 -eq 0 ];then
+		func_ts 0  "";
+	else
+		func_ts 1 "$2";
+	fi
+}
+
+func_ts(){
+	tip=$2
+	if [ $1 -eq 0 ] ;then
+		echo -e ">>>> \033[34m[$tip OK ]\033[0m"
+	else
+		echo -e ">>>> \033[31m$tip [ ERROR ]\033[0m"
+	fi
+}
+
+show_help(){
+
+cat <<_ACEOF
+
+Usage: [start|stop|restart]
+
+1 is number 1
+
+Configuration:
+    start  : start telefraf
+    restart  : restart telefraf; 
+    stop  : stop telefraf;
+
+_ACEOF
+
+}
+
+
+kill_process() {
+    PID=`ps aux | grep "${1}" | grep -v grep | awk -F ' ' '{print $1}'`
+    if [ $PID ]; then
+        kill $2 $PID > /dev/null &
+    fi
+}
+
+is_process_run(){
+    return `ps aux | grep "${1}" | grep -v grep | wc -l`
+}
+
+wait_process_quit(){
+    TIMEOUT=$2
+    TRY_COUNT=1
+    while true ; do
+        is_process_run "${1}"
+        ret=$?
+        if [ $ret -lt 1 ]; then
+            return 0
+        fi
+
+        if [ $TRY_COUNT -gt $TIMEOUT ]; then
+            break
+        fi
+
+        TRY_COUNT=$(($TRY_COUNT+1))
+        sleep 1
+    done
+
+    kill_process "${1}" -9
+
+    return 1
+}
+
+
+
+do_start(){
+    is_process_run '/opt/telegraf/telegraf'
+    ret=$?
+    if [ $ret -lt 1 ]; then
+	    result=$(/opt/telegraf/telegraf -config /opt/telegraf/telegraf.conf > /dev/null 2>&1 &)
+		echo $result
+		error_exit  $?  "$result" "start telegraf .."
+    fi
+}
+
+do_stop(){
+
+	is_process_run '/opt/telegraf/telegraf'
+    ret=$?
+    if [ $ret -ge 1 ]; then
+        result=$(kill_process '/opt/telegraf/telegraf' 2>&1)
+		error_exit  $?  "$result" "stop telegraf .."
+    fi
+
+}
+
+
+
+case $1 in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    restart)
+        $0 stop && sleep 2 && $0 start
+        ;;
+     *)
+        show_help
+		exit 1
+		;;
+esac
