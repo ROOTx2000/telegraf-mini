@@ -25,4 +25,5 @@
 主要修改：
 1. 删除input及output plugins目录下中all.go文件中不需要的plugin
 2. 替换golang.org/x引用，改为github.com/golang
+3. 使用官方提供的Makefile进行编译，在命令行执行“CGO_ENABLED=0 GOOS=linux GOARCH=arm LDFLAGS="-w -s" make”即可
 
